@@ -55,6 +55,9 @@ async function run() {
       .db("gym-wave")
       .collection("subscribers");
     const articlesCollection = client.db("gym-wave").collection("articles");
+    const appliedTrainerCollection = client
+      .db("gym-wave")
+      .collection("applied-trainers");
     const paymentCollection = client.db("gym-wave").collection("payments");
 
     // generate token
@@ -123,6 +126,43 @@ async function run() {
       }
     };
 
+    // save a user and to the database and do other function using same api
+    app.put("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user?.email };
+      const isExist = await usersCollection.findOne(query);
+      if (isExist) {
+        if (user?.status === "Requested") {
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status },
+          });
+          return res.send(result);
+        } else {
+          return res.send(isExist);
+        }
+      }
+
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timeStamp: Date.now(),
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    });
+
+    app.get("/users/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const result = await usersCollection.findOne({ email });
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
     // get all the classes
     app.get("/classes", async (req, res) => {
       try {
@@ -155,6 +195,23 @@ async function run() {
       }
     });
 
+    // post subscriber
+    app.post("/subscribers", async (req, res) => {
+      const { name, email } = req.body;
+      try {
+        const user = await subscribersCollection.findOne({ email: email });
+        if (user) {
+          return res
+            .status(400)
+            .json({ message: "!!! you already subscribed" });
+        }
+        const result = await subscribersCollection.insertOne({ name, email });
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
+
     // get all the subscribers
     app.get("/subscribers", async (req, res) => {
       try {
@@ -165,11 +222,32 @@ async function run() {
       }
     });
 
+    app.post("/trainers", async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await trainersCollection.insertOne(data);
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
     // get all the trainers
     app.get("/trainers", async (req, res) => {
       try {
-        const trainers = await trainersCollection.find().toArray();
-        res.send(trainers);
+        const result = await trainersCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    app.get("/trainers/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await trainersCollection.findOne(query);
+        res.send(result);
       } catch (error) {
         console.log(error);
       }
@@ -185,6 +263,18 @@ async function run() {
       }
     });
 
+    // post an article or blogs
+    app.post("/articles", async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await articlesCollection.insertOne(data);
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    // get all the blogs and article
     app.get("/articles", async (req, res) => {
       try {
         const articles = await articlesCollection.find().toArray();
