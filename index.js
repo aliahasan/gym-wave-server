@@ -293,7 +293,8 @@ async function run() {
     // application for applied trainer
     app.post("/applied-trainers", async (req, res) => {
       try {
-        const appliedUser = req.body;
+        const appliedTrainer = req.body;
+        console.log(appliedTrainer);
         const result = await appliedTrainerCollection.insertOne(appliedUser);
         res.send(result);
       } catch (error) {
@@ -301,8 +302,41 @@ async function run() {
       }
     });
 
+    // update userRole
+    app.post("/update/user/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const application = await appliedTrainerCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        console.log(application);
+        if (!application) {
+          return res.status(404).send({ message: "Application not found" });
+        }
+        const { userId, ...updateFields } = application;
+        delete updateFields._id;
+        await usersCollection.updateOne(
+          { _id: ObjectId.createFromHexString(userId) },
+          { $set: updateFields }
+        );
+        const result = await appliedTrainerCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
     // get all the appliedTrainer
-    app.get("");
+    app.get("/applied-trainers", async (req, res) => {
+      try {
+        const result = await appliedTrainerCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
 
     // get reviews
     app.get("/reviews", async (req, res) => {
