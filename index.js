@@ -377,12 +377,15 @@ async function run() {
       }
     });
 
-    app.get("/bookings/trainer", async (req, res) => {
+    app.get("/bookings/trainers", async (req, res) => {
       try {
         const email = req.query.email;
         if (!email) return res.send([]);
         const query = { "sellerInfo.trainerEmail": email };
-        const result = await bookingCollection.find(query).toArray();
+        const options = {
+          projection: { classes: 0 },
+        };
+        const result = await bookingCollection.find(query, options).toArray();
         res.send(result);
       } catch (error) {
         console.log(error);
