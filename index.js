@@ -1,11 +1,12 @@
+require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cookieParser = require("cookie-parser");
 const port = process.env.port || 3000;
 const jwt = require("jsonwebtoken");
 const express = require("express");
-require("dotenv").config();
 const app = express();
 const cors = require("cors");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 app.use(express.json());
 app.use(
   cors({
@@ -49,8 +50,8 @@ async function run() {
   try {
     const usersCollection = client.db("gym-wave").collection("users");
     const classesCollection = client.db("gym-wave").collection("classes");
-    const trainersCollection = client.db("gym-wave").collection("trainers");
     const reviewsCollection = client.db("gym-wave").collection("reviews");
+    const bookingCollection = client.db("gym-wave").collection("bookings");
     const subscribersCollection = client
       .db("gym-wave")
       .collection("subscribers");
@@ -128,35 +129,64 @@ async function run() {
 
     // save a user and to the database and do other function using same api
     app.put("/users", async (req, res) => {
-      const user = req.body;
-      const query = { email: user?.email };
-      const isExist = await usersCollection.findOne(query);
-      if (isExist) {
-        if (user?.status === "Requested") {
-          const result = await usersCollection.updateOne(query, {
-            $set: { status: user?.status },
-          });
-          return res.send(result);
-        } else {
-          return res.send(isExist);
+      try {
+        const user = req.body;
+        const query = { email: user?.email };
+        const isExist = await usersCollection.findOne(query);
+        if (isExist) {
+          if (user?.status === "Requested") {
+            const result = await usersCollection.updateOne(query, {
+              $set: { status: user?.status },
+            });
+            return res.send(result);
+          } else {
+            return res.send(isExist);
+          }
         }
-      }
 
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: {
-          ...user,
-          timeStamp: Date.now(),
-        },
-      };
-      const result = await usersCollection.updateOne(query, updateDoc, options);
-      res.send(result);
+        const options = { upsert: true };
+        const updateDoc = {
+          $set: {
+            ...user,
+            timeStamp: Date.now(),
+          },
+        };
+        const result = await usersCollection.updateOne(
+          query,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    // get all the users , usersCollection
+    app.get("/users", async (req, res) => {
+      try {
+        const users = await usersCollection.find().toArray();
+        res.send(users);
+      } catch (error) {
+        console.log(error);
+      }
     });
 
     app.get("/users/:email", async (req, res) => {
       try {
         const email = req.params.email;
         const result = await usersCollection.findOne({ email });
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    // post a class
+    app.post("/class", async (req, res) => {
+      try {
+        const data = req.body;
+        const result = await classesCollection.insertOne(data);
         res.send(result);
       } catch (error) {
         console.log(error);
@@ -185,11 +215,25 @@ async function run() {
       }
     });
 
-    // get all the users , usersCollection
-    app.get("/users", async (req, res) => {
+    // get packagePlan from class collection
+    app.get("/packages", async (req, res) => {
       try {
-        const users = await usersCollection.find().toArray();
-        res.send(users);
+        const sliverClasses = await classesCollection
+          .find({ type: "sliver" })
+          .limit(2)
+          .toArray();
+        const goldClasses = await classesCollection
+          .find({ type: "gold" })
+          .toArray();
+        const diamondClasses = await classesCollection
+          .find({ type: "diamond" })
+          .limit(3)
+          .toArray();
+        res.status(200).send({
+          silver: sliverClasses,
+          gold: goldClasses,
+          diamond: diamondClasses,
+        });
       } catch (error) {
         console.log(error);
       }
@@ -203,12 +247,12 @@ async function run() {
         if (user) {
           return res
             .status(400)
-            .json({ message: "!!! you already subscribed" });
+            .send({ message: "!!! you already subscribed" });
         }
         const result = await subscribersCollection.insertOne({ name, email });
         res.send(result);
       } catch (error) {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).send({ message: "Internal server error" });
       }
     });
 
@@ -222,36 +266,43 @@ async function run() {
       }
     });
 
-    app.post("/trainers", async (req, res) => {
-      try {
-        const data = req.body;
-        const result = await trainersCollection.insertOne(data);
-        res.send(result);
-      } catch (error) {
-        console.log(error);
-      }
-    });
-
     // get all the trainers
     app.get("/trainers", async (req, res) => {
       try {
-        const result = await trainersCollection.find().toArray();
+        const result = await usersCollection
+          .find({ role: "trainer" })
+          .toArray();
         res.send(result);
       } catch (error) {
         console.log(error);
       }
     });
 
+    // get a trainer details
     app.get("/trainers/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
-        const result = await trainersCollection.findOne(query);
+        const result = await usersCollection.findOne(query);
         res.send(result);
       } catch (error) {
         console.log(error);
       }
     });
+
+    // application for applied trainer
+    app.post("/applied-trainers", async (req, res) => {
+      try {
+        const appliedUser = req.body;
+        const result = await appliedTrainerCollection.insertOne(appliedUser);
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    // get all the appliedTrainer
+    app.get("");
 
     // get reviews
     app.get("/reviews", async (req, res) => {
@@ -279,6 +330,70 @@ async function run() {
       try {
         const articles = await articlesCollection.find().toArray();
         res.send(articles);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    // create-payment-intent
+    app.post("/create-payment-intent", async (req, res) => {
+      try {
+        const { price } = req.body;
+        const amount = parseInt(price * 100);
+        if (!amount || amount < 1) return;
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
+
+    app.post("/bookings", async (req, res) => {
+      try {
+        const bookingData = req.body;
+        const result = await bookingCollection.insertOne(bookingData);
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    app.get("/bookings/buyer", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.send([]);
+        const query = { "buyerInfo.buyerEmail": email };
+        const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    app.get("/bookings/trainer", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.send([]);
+        const query = { "sellerInfo.trainerEmail": email };
+        const result = await bookingCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    app.post("/payments", async (req, res) => {
+      try {
+        const paymentData = req.body;
+        const result = await paymentCollection.insertOne(paymentData);
+        res.send(result);
       } catch (error) {
         console.log(error);
       }
