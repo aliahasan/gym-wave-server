@@ -293,8 +293,7 @@ async function run() {
     // application for applied trainer
     app.post("/applied-trainers", async (req, res) => {
       try {
-        const appliedTrainer = req.body;
-        console.log(appliedTrainer);
+        const appliedUser = req.body;
         const result = await appliedTrainerCollection.insertOne(appliedUser);
         res.send(result);
       } catch (error) {
@@ -313,11 +312,11 @@ async function run() {
         if (!application) {
           return res.status(404).send({ message: "Application not found" });
         }
-        const { userId, ...updateFields } = application;
-        delete updateFields._id;
+        const { userId } = application;
+        delete application._id;
         await usersCollection.updateOne(
           { _id: ObjectId.createFromHexString(userId) },
-          { $set: updateFields }
+          { $set: { role: "trainer", ...application } }
         );
         const result = await appliedTrainerCollection.deleteOne({
           _id: new ObjectId(id),
