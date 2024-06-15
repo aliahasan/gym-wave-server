@@ -183,7 +183,7 @@ async function run() {
     });
 
     // post a class
-    app.post("/class", async (req, res) => {
+    app.post("/class", verifyToken, verifyTrainer, async (req, res) => {
       try {
         const data = req.body;
         const result = await classesCollection.insertOne(data);
@@ -257,7 +257,7 @@ async function run() {
     });
 
     // get all the subscribers
-    app.get("/subscribers", async (req, res) => {
+    app.get("/subscribers", verifyToken, verifyAdmin, async (req, res) => {
       try {
         const subscribers = await subscribersCollection.find().toArray();
         res.send(subscribers);
@@ -291,18 +291,23 @@ async function run() {
     });
 
     // application for applied trainer
-    app.post("/applied-trainers", async (req, res) => {
-      try {
-        const appliedUser = req.body;
-        const result = await appliedTrainerCollection.insertOne(appliedUser);
-        res.send(result);
-      } catch (error) {
-        console.log(error);
+    app.post(
+      "/applied-trainers",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const appliedUser = req.body;
+          const result = await appliedTrainerCollection.insertOne(appliedUser);
+          res.send(result);
+        } catch (error) {
+          console.log(error);
+        }
       }
-    });
+    );
 
     // update userRole
-    app.post("/update/user/:id", async (req, res) => {
+    app.post("/update/user/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       try {
         const application = await appliedTrainerCollection.findOne({
@@ -328,7 +333,7 @@ async function run() {
     });
 
     // get all the appliedTrainer
-    app.get("/applied-trainers", async (req, res) => {
+    app.get("/applied-trainers", verifyToken, verifyAdmin, async (req, res) => {
       try {
         const result = await appliedTrainerCollection.find().toArray();
         res.send(result);
@@ -348,7 +353,7 @@ async function run() {
     });
 
     // post an article or blogs
-    app.post("/articles", async (req, res) => {
+    app.post("/articles", verifyToken, async (req, res) => {
       try {
         const data = req.body;
         const result = await articlesCollection.insertOne(data);
@@ -369,7 +374,7 @@ async function run() {
     });
 
     // create-payment-intent
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       try {
         const { price } = req.body;
         const amount = parseInt(price * 100);
@@ -388,7 +393,7 @@ async function run() {
       }
     });
 
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", verifyToken, async (req, res) => {
       try {
         const bookingData = req.body;
         const result = await bookingCollection.insertOne(bookingData);
@@ -398,7 +403,7 @@ async function run() {
       }
     });
 
-    app.get("/bookings/buyer", async (req, res) => {
+    app.get("/bookings/buyer", verifyToken, async (req, res) => {
       try {
         const email = req.query.email;
         if (!email) return res.send([]);
@@ -410,20 +415,25 @@ async function run() {
       }
     });
 
-    app.get("/bookings/trainers", async (req, res) => {
-      try {
-        const email = req.query.email;
-        if (!email) return res.send([]);
-        const query = { "sellerInfo.trainerEmail": email };
-        const options = {
-          projection: { classes: 0 },
-        };
-        const result = await bookingCollection.find(query, options).toArray();
-        res.send(result);
-      } catch (error) {
-        console.log(error);
+    app.get(
+      "/bookings/trainers",
+      verifyToken,
+      verifyTrainer,
+      async (req, res) => {
+        try {
+          const email = req.query.email;
+          if (!email) return res.send([]);
+          const query = { "sellerInfo.trainerEmail": email };
+          const options = {
+            projection: { classes: 0 },
+          };
+          const result = await bookingCollection.find(query, options).toArray();
+          res.send(result);
+        } catch (error) {
+          console.log(error);
+        }
       }
-    });
+    );
 
     app.post("/payments", async (req, res) => {
       try {
