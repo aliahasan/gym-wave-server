@@ -57,6 +57,7 @@ async function run() {
     const classesCollection = client.db("gym-wave").collection("classes");
     const reviewsCollection = client.db("gym-wave").collection("reviews");
     const bookingCollection = client.db("gym-wave").collection("bookings");
+    const trainersCollection = client.db("gym-wave").collection("trainers");
     const subscribersCollection = client
       .db("gym-wave")
       .collection("subscribers");
@@ -274,7 +275,7 @@ async function run() {
     // get all the trainers
     app.get("/trainers", async (req, res) => {
       try {
-        const result = await usersCollection
+        const result = await trainersCollection
           .find({ role: "trainer" })
           .toArray();
         res.send(result);
@@ -288,7 +289,7 @@ async function run() {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
-        const result = await usersCollection.findOne(query);
+        const result = await trainersCollection.findOne(query);
         res.send(result);
       } catch (error) {
         console.log(error);
