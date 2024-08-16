@@ -1,13 +1,13 @@
 require("dotenv").config();
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const cookieParser = require("cookie-parser");
+import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
+import cookieParser from "cookie-parser";
 const port = process.env.port || 3000;
-const jwt = require("jsonwebtoken");
-const express = require("express");
+import { verify, sign } from "jsonwebtoken";
+import express, { json } from "express";
 const app = express();
-const cors = require("cors");
+import cors from "cors";
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-app.use(express.json());
+app.use(json());
 app.use(
   cors({
     credentials: true,
@@ -38,7 +38,7 @@ const verifyToken = async (req, res, next) => {
     if (!token) {
       return res.status(403).send({ message: "Unauthorized access" });
     }
-    jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
+    verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
       if (error) {
         console.log(error);
         return res.status(401).send({ message: "Failed to authenticate" });
@@ -71,7 +71,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       try {
         const user = req.body;
-        const token = jwt.sign(user, process.env.TOKEN_SECRET, {
+        const token = sign(user, process.env.TOKEN_SECRET, {
           expiresIn: "365d",
         });
         res
@@ -164,7 +164,7 @@ async function run() {
         );
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -174,7 +174,7 @@ async function run() {
         const users = await usersCollection.find().toArray();
         res.send(users);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -184,7 +184,7 @@ async function run() {
         const result = await usersCollection.findOne({ email });
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -195,7 +195,7 @@ async function run() {
         const result = await classesCollection.insertOne(data);
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -205,7 +205,7 @@ async function run() {
         const classes = await classesCollection.find().toArray();
         res.send(classes);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -217,7 +217,7 @@ async function run() {
         const result = await classesCollection.findOne(query);
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -241,7 +241,7 @@ async function run() {
           diamond: diamondClasses,
         });
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -268,7 +268,7 @@ async function run() {
         const subscribers = await subscribersCollection.find().toArray();
         res.send(subscribers);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -280,7 +280,7 @@ async function run() {
           .toArray();
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -292,7 +292,7 @@ async function run() {
         const result = await trainersCollection.findOne(query);
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -307,7 +307,7 @@ async function run() {
           const result = await appliedTrainerCollection.insertOne(appliedUser);
           res.send(result);
         } catch (error) {
-          console.log(error);
+          res.status(500).json({ error: error.message });
         }
       }
     );
@@ -334,7 +334,7 @@ async function run() {
         });
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -344,7 +344,7 @@ async function run() {
         const result = await appliedTrainerCollection.find().toArray();
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -363,19 +363,19 @@ async function run() {
       try {
         const data = req.body;
         const result = await articlesCollection.insertOne(data);
-        res.send(result);
+        res.status(201).json(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
     // get all the blogs and article
     app.get("/articles", async (req, res) => {
       try {
-        const articles = await articlesCollection.find().toArray();
-        res.send(articles);
+        const blogs = await articlesCollection.find().toArray();
+        res.status(200).json(blogs);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -405,7 +405,7 @@ async function run() {
         const result = await bookingCollection.insertOne(bookingData);
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -417,7 +417,7 @@ async function run() {
         const result = await bookingCollection.find(query).toArray();
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -436,7 +436,7 @@ async function run() {
           const result = await bookingCollection.find(query, options).toArray();
           res.send(result);
         } catch (error) {
-          console.log(error);
+          res.status(500).json({ error: error.message });
         }
       }
     );
@@ -447,7 +447,7 @@ async function run() {
         const result = await paymentCollection.insertOne(paymentData);
         res.send(result);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -456,7 +456,7 @@ async function run() {
         const payments = await paymentCollection.find().toArray();
         res.send(payments);
       } catch (error) {
-        console.log(error);
+        res.status(500).json({ error: error.message });
       }
     });
 
