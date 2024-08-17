@@ -230,6 +230,7 @@ async function run() {
           .toArray();
         const goldClasses = await classesCollection
           .find({ type: "gold" })
+          .limit(2)
           .toArray();
         const diamondClasses = await classesCollection
           .find({ type: "diamond" })
@@ -399,6 +400,7 @@ async function run() {
       }
     });
 
+    // store all the bookings
     app.post("/bookings", verifyToken, async (req, res) => {
       try {
         const bookingData = req.body;
@@ -409,11 +411,12 @@ async function run() {
       }
     });
 
+    // get all bookings data of a user
     app.get("/bookings/buyer", verifyToken, async (req, res) => {
       try {
         const email = req.query.email;
         if (!email) return res.send([]);
-        const query = { "buyerInfo.buyerEmail": email };
+        const query = { "buyer.email": email };
         const result = await bookingCollection.find(query).toArray();
         res.send(result);
       } catch (error) {
@@ -421,6 +424,7 @@ async function run() {
       }
     });
 
+    // get all the booked data of trainer
     app.get(
       "/bookings/trainers",
       verifyToken,
@@ -429,7 +433,7 @@ async function run() {
         try {
           const email = req.query.email;
           if (!email) return res.send([]);
-          const query = { "sellerInfo.trainerEmail": email };
+          const query = { "trainer.email": email };
           const options = {
             projection: { classes: 0 },
           };
