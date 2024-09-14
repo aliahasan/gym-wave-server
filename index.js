@@ -1,12 +1,19 @@
-require("dotenv").config();
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 import cookieParser from "cookie-parser";
-const port = process.env.port || 3000;
-import { verify, sign } from "jsonwebtoken";
+import { config } from "dotenv";
+import pkg from "jsonwebtoken";
 import express, { json } from "express";
-const app = express();
 import cors from "cors";
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+const { verify, sign } = pkg;
+const port = process.env.PORT || 5001;
+const app = express();
+
+// Use dynamic import for Stripe
+const stripe = (await import("stripe")).default(process.env.STRIPE_SECRET_KEY);
+
+config(); // Loads environment variables
+
 app.use(json());
 app.use(
   cors({
@@ -21,6 +28,8 @@ app.use(
   })
 );
 app.use(cookieParser());
+
+// Your routes and other app setup code go here
 
 const uri = process.env.DB_URI;
 const client = new MongoClient(uri, {
